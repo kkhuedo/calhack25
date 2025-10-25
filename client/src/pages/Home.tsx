@@ -85,6 +85,27 @@ export default function Home() {
     },
   });
 
+  const deleteSlotMutation = useMutation({
+    mutationFn: async (slotId: string) => {
+      return await apiRequest("DELETE", `/api/parking-slots/${slotId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/parking-slots"] });
+      setConfirmationMessage({
+        title: "Removed",
+        message: "Parking spot removed from the map.",
+      });
+      setShowConfirmation(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove parking spot.",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -126,6 +147,10 @@ export default function Home() {
     markTakenMutation.mutate(slot.id);
   };
 
+  const handleTakeSpot = (slot: ParkingSlot) => {
+    deleteSlotMutation.mutate(slot.id);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="flex items-center justify-between px-4 py-3 border-b bg-background z-10 shadow-sm">
@@ -165,7 +190,18 @@ export default function Home() {
 
       <main className="flex-1 overflow-hidden">
         {view === "map" ? (
-          <div className="w-full h-full">
+          <div className="w-full h-full relative">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000]">
+              <Button
+                size="lg"
+                className="shadow-xl bg-primary hover:bg-primary/90"
+                onClick={() => setIsAddDialogOpen(true)}
+                data-testid="button-share-spot"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Share Your Spot
+              </Button>
+            </div>
             {isLoading ? (
               <LoadingSpinner message="Loading parking spots..." />
             ) : (
@@ -200,6 +236,7 @@ export default function Home() {
                     distance={slot.distance}
                     onNavigate={handleNavigate}
                     onMarkTaken={handleMarkTaken}
+                    onTake={handleTakeSpot}
                   />
                 ))}
               </div>
@@ -207,15 +244,6 @@ export default function Home() {
           </div>
         )}
       </main>
-
-      <Button
-        size="lg"
-        className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-xl z-50"
-        onClick={() => setIsAddDialogOpen(true)}
-        data-testid="button-add-spot-fab"
-      >
-        <Plus className="w-6 h-6" />
-      </Button>
 
       <AddParkingSpotDialog
         open={isAddDialogOpen}
