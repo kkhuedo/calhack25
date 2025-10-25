@@ -77,6 +77,11 @@ export function AddParkingSpotDialog({ open, onOpenChange, onSubmit, isPending }
       (error) => {
         setLocationError(error.message || "Unable to retrieve your location");
         setIsLoadingLocation(false);
+      },
+      {
+        timeout: 10000,
+        maximumAge: 0,
+        enableHighAccuracy: false,
       }
     );
   };

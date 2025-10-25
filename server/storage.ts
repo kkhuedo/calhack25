@@ -27,8 +27,12 @@ export class MemStorage implements IStorage {
   async createParkingSlot(insertSlot: InsertParkingSlot): Promise<ParkingSlot> {
     const id = randomUUID();
     const slot: ParkingSlot = {
-      ...insertSlot,
       id,
+      latitude: insertSlot.latitude,
+      longitude: insertSlot.longitude,
+      address: insertSlot.address,
+      notes: insertSlot.notes || null,
+      status: insertSlot.status || "available",
       postedAt: new Date(),
     };
     this.parkingSlots.set(id, slot);

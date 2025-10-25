@@ -103,7 +103,7 @@ export default function Home() {
 
   const availableSlots = slots.filter((slot) => slot.status === "available");
   
-  const slotsWithDistance = userLocation
+  const slotsWithDistance: (ParkingSlot & { distance?: number })[] = userLocation
     ? availableSlots
         .map((slot) => ({
           ...slot,
@@ -114,7 +114,7 @@ export default function Home() {
             slot.longitude
           ),
         }))
-        .sort((a, b) => a.distance - b.distance)
+        .sort((a, b) => (a.distance || 0) - (b.distance || 0))
     : availableSlots;
 
   const handleNavigate = (slot: ParkingSlot) => {

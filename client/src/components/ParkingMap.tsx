@@ -103,7 +103,11 @@ export function ParkingMap({ slots, userLocation, onMapClick, onSlotClick, cente
 
         const marker = L.marker([slot.latitude, slot.longitude], {
           icon: markerIcon,
-        }).addTo(mapRef.current);
+        });
+        
+        if (mapRef.current) {
+          marker.addTo(mapRef.current);
+        }
 
         marker.on("click", () => {
           setSelectedSlot(slot);
