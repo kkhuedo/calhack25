@@ -31,6 +31,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  app.get("/health", async (_req, res) => {
+    try {
+      await storage.getParkingSlots();
+      res.status(200).json({ status: "ok", database: "connected" });
+    } catch (error) {
+      console.error("Health check failed:", error);
+      res.status(503).json({ status: "error", database: "disconnected" });
+    }
+  });
+
   app.get("/api/parking-slots", async (req, res) => {
     try {
       const slots = await storage.getParkingSlots();
