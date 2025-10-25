@@ -17,6 +17,7 @@ ParkShare is a real-time parking slot sharing application that allows users to m
   - Fixed WebSocket cleanup to prevent reconnection loops
   - Implemented strict PATCH validation (only notes and status can be updated)
   - Added auto-dismiss confirmation dialogs for success messages
+  - **Migrated from in-memory to PostgreSQL database for data persistence**
   - All TypeScript errors resolved and LSP clean
 
 ## Project Architecture
@@ -33,7 +34,7 @@ ParkShare is a real-time parking slot sharing application that allows users to m
   - `ThemeToggle.tsx` - Dark/light mode toggle
 
 ### Backend (Express + TypeScript)
-- In-memory storage for parking slots
+- PostgreSQL database with Drizzle ORM for persistent storage
 - RESTful API endpoints for CRUD operations
 - WebSocket support for real-time updates
 - Zod validation for request data
