@@ -9,7 +9,6 @@ interface ParkingSlotCardProps {
   distance?: number;
   onNavigate?: (slot: ParkingSlot) => void;
   onMarkTaken?: (slot: ParkingSlot) => void;
-  onTake?: (slot: ParkingSlot) => void;
 }
 
 function getTimeAgo(date: Date): string {
@@ -22,7 +21,7 @@ function getTimeAgo(date: Date): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-export function ParkingSlotCard({ slot, distance, onNavigate, onMarkTaken, onTake }: ParkingSlotCardProps) {
+export function ParkingSlotCard({ slot, distance, onNavigate, onMarkTaken }: ParkingSlotCardProps) {
   const isAvailable = slot.status === "available";
 
   return (
@@ -80,15 +79,14 @@ export function ParkingSlotCard({ slot, distance, onNavigate, onMarkTaken, onTak
               Navigate
             </Button>
           )}
-          {isAvailable && onTake && (
+          {isAvailable && onMarkTaken && (
             <Button 
               size="sm" 
-              variant="default"
-              className="bg-primary"
-              onClick={() => onTake(slot)}
-              data-testid={`button-take-${slot.id}`}
+              variant="outline"
+              onClick={() => onMarkTaken(slot)}
+              data-testid={`button-mark-taken-${slot.id}`}
             >
-              Take
+              Mark Taken
             </Button>
           )}
         </div>
