@@ -1,5 +1,6 @@
-import { type ParkingSlot, type InsertParkingSlot } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { parkingSlots, type ParkingSlot, type InsertParkingSlot } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getParkingSlots(): Promise<ParkingSlot[]>;
@@ -9,53 +10,40 @@ export interface IStorage {
   deleteParkingSlot(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private parkingSlots: Map<string, ParkingSlot>;
-
-  constructor() {
-    this.parkingSlots = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   async getParkingSlots(): Promise<ParkingSlot[]> {
-    return Array.from(this.parkingSlots.values());
+    return await db.select().from(parkingSlots);
   }
 
   async getParkingSlot(id: string): Promise<ParkingSlot | undefined> {
-    return this.parkingSlots.get(id);
+    const [slot] = await db.select().from(parkingSlots).where(eq(parkingSlots.id, id));
+    return slot || undefined;
   }
 
   async createParkingSlot(insertSlot: InsertParkingSlot): Promise<ParkingSlot> {
-    const id = randomUUID();
-    const slot: ParkingSlot = {
-      id,
-      latitude: insertSlot.latitude,
-      longitude: insertSlot.longitude,
-      address: insertSlot.address,
-      notes: insertSlot.notes || null,
-      status: insertSlot.status || "available",
-      postedAt: new Date(),
-    };
-    this.parkingSlots.set(id, slot);
+    const [slot] = await db
+      .insert(parkingSlots)
+      .values(insertSlot)
+      .returning();
     return slot;
   }
 
   async updateParkingSlot(id: string, updates: Partial<InsertParkingSlot>): Promise<ParkingSlot | undefined> {
-    const slot = this.parkingSlots.get(id);
-    if (!slot) {
-      return undefined;
-    }
-
-    const updatedSlot: ParkingSlot = {
-      ...slot,
-      ...updates,
-    };
-    this.parkingSlots.set(id, updatedSlot);
-    return updatedSlot;
+    const [updatedSlot] = await db
+      .update(parkingSlots)
+      .set(updates)
+      .where(eq(parkingSlots.id, id))
+      .returning();
+    return updatedSlot || undefined;
   }
 
   async deleteParkingSlot(id: string): Promise<boolean> {
-    return this.parkingSlots.delete(id);
+    const result = await db
+      .delete(parkingSlots)
+      .where(eq(parkingSlots.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
