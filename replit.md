@@ -4,7 +4,7 @@
 ParkShare is a real-time parking slot sharing application that allows users to mark their parking spots as available when leaving and find open parking on an interactive map. Built with React, TypeScript, Express, and Leaflet for mapping.
 
 ## Recent Changes
-- **2025-10-25**: Complete MVP implementation with architect review
+- **2025-10-25**: Complete MVP implementation with architect review + deployment fixes
   - Created complete data schema for parking slots
   - Built all frontend components with Material Design 3 principles
   - Implemented interactive Leaflet map with custom markers (green for available, gray for taken)
@@ -18,6 +18,9 @@ ParkShare is a real-time parking slot sharing application that allows users to m
   - Implemented strict PATCH validation (only notes and status can be updated)
   - Added auto-dismiss confirmation dialogs for success messages
   - **Migrated from in-memory to PostgreSQL database for data persistence**
+  - **Added /health endpoint for Autoscale deployment monitoring**
+  - **Added startup error handling to prevent crashes**
+  - **Ready for Autoscale deployment with multiple instances**
   - All TypeScript errors resolved and LSP clean
 
 ## Project Architecture
