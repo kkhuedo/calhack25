@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Map, List, Plus, MapPin, MapPinned } from "lucide-react";
+import { Map, List, Plus, MapPin, MapPinned, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -9,6 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ParkingMap } from "@/components/ParkingMap";
 import { ParkingSlotCard } from "@/components/ParkingSlotCard";
 import { AddParkingSpotDialog } from "@/components/AddParkingSpotDialog";
@@ -42,6 +50,17 @@ export default function Home() {
   const [confirmationMessage, setConfirmationMessage] = useState({ title: "", message: "" });
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [radiusMiles, setRadiusMiles] = useState(0.5); // Default: 0.5 miles (walkable distance ~10 min walk)
+
+  // Filtering state
+  const [filters, setFilters] = useState({
+    showFree: true,
+    showPaid: true,
+    showStreet: true,
+    showLot: true,
+    showGarage: true,
+    showMetered: true,
+  });
+
   const { toast } = useToast();
 
   useWebSocket();
@@ -130,8 +149,26 @@ export default function Home() {
     }
   }, []);
 
-  const availableSlots = slots.filter((slot) => slot.status === "available");
-  
+  // Apply filters
+  const availableSlots = slots
+    .filter((slot) => slot.status === "available")
+    .filter((slot) => {
+      // Filter by parking type
+      if (slot.spotType === "street" && !filters.showStreet) return false;
+      if (slot.spotType === "public_lot" && !filters.showLot) return false;
+      if (slot.spotType === "garage" && !filters.showGarage) return false;
+      if (slot.spotType === "metered" && !filters.showMetered) return false;
+
+      // Filter by cost (free vs paid)
+      const isFree = !slot.restrictions?.fee && slot.spotType !== "metered";
+      const isPaid = slot.restrictions?.fee || slot.spotType === "metered";
+
+      if (isFree && !filters.showFree) return false;
+      if (isPaid && !filters.showPaid) return false;
+
+      return true;
+    });
+
   const slotsWithDistance: (ParkingSlot & { distance?: number })[] = userLocation
     ? availableSlots
         .map((slot) => ({
@@ -188,6 +225,58 @@ export default function Home() {
               <SelectItem value="5">5 miles</SelectItem>
             </SelectContent>
           </Select>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Filter className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Filter by Cost</DropdownMenuLabel>
+              <DropdownMenuCheckboxItem
+                checked={filters.showFree}
+                onCheckedChange={(checked) => setFilters({ ...filters, showFree: checked })}
+              >
+                Free Parking
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.showPaid}
+                onCheckedChange={(checked) => setFilters({ ...filters, showPaid: checked })}
+              >
+                Paid/Metered
+              </DropdownMenuCheckboxItem>
+
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
+
+              <DropdownMenuCheckboxItem
+                checked={filters.showStreet}
+                onCheckedChange={(checked) => setFilters({ ...filters, showStreet: checked })}
+              >
+                Street Parking
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.showMetered}
+                onCheckedChange={(checked) => setFilters({ ...filters, showMetered: checked })}
+              >
+                Metered Spots
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.showLot}
+                onCheckedChange={(checked) => setFilters({ ...filters, showLot: checked })}
+              >
+                Parking Lots
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.showGarage}
+                onCheckedChange={(checked) => setFilters({ ...filters, showGarage: checked })}
+              >
+                Garages
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button
             variant={view === "map" ? "default" : "ghost"}
             size="icon"
@@ -215,7 +304,7 @@ export default function Home() {
               <LoadingSpinner message="Loading parking spots..." />
             ) : (
               <ParkingMap
-                slots={slots}
+                slots={slotsWithDistance}
                 userLocation={userLocation}
                 centerOnUser={!!userLocation}
                 onSlotClick={handleNavigate}
