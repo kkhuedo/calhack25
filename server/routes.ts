@@ -64,11 +64,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Two-tier spot discovery endpoint
+  app.post("/api/parking-slots/report", async (req, res) => {
+    try {
+      const reportSchema = z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        status: z.enum(["available", "taken"]),
+        userId: z.string().optional(),
+      });
+
+      const validatedData = reportSchema.parse(req.body);
+      const result = await storage.reportParkingSpot(
+        validatedData.latitude,
+        validatedData.longitude,
+        validatedData.status,
+        validatedData.userId
+      );
+
+      // Broadcast appropriate event
+      if (result.isNewDiscovery) {
+        broadcast({
+          type: "spot_discovered",
+          data: result.spot,
+        });
+      } else {
+        broadcast({
+          type: "slot_updated",
+          data: result.spot,
+        });
+      }
+
+      res.status(result.isNewDiscovery ? 201 : 200).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error reporting parking spot:", error);
+      res.status(500).json({ error: "Failed to report parking spot" });
+    }
+  });
+
+  // Confirm unverified spot endpoint
+  app.post("/api/parking-slots/:id/confirm", async (req, res) => {
+    try {
+      const confirmSchema = z.object({
+        userId: z.string().optional(),
+      });
+
+      const validatedData = confirmSchema.parse(req.body);
+      const updatedSlot = await storage.confirmParkingSpot(req.params.id, validatedData.userId);
+
+      if (!updatedSlot) {
+        return res.status(404).json({ error: "Parking slot not found" });
+      }
+
+      broadcast({
+        type: "slot_confirmed",
+        data: updatedSlot,
+      });
+
+      res.json({
+        spot: updatedSlot,
+        message: updatedSlot.verified
+          ? "Spot verified! Thanks for confirming."
+          : `Spot confirmed (${updatedSlot.userConfirmations}/3 confirmations)`,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error confirming parking spot:", error);
+      res.status(500).json({ error: "Failed to confirm parking spot" });
+    }
+  });
+
   app.post("/api/parking-slots", async (req, res) => {
     try {
       const validatedData = insertParkingSlotSchema.parse(req.body);
       const newSlot = await storage.createParkingSlot(validatedData);
-      
+
       broadcast({
         type: "slot_created",
         data: newSlot,
