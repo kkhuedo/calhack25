@@ -17,6 +17,9 @@
  *   SF_PARKING_CSV_PATH - Path to SF parking regulations CSV (optional)
  */
 
+// Load environment variables from .env file
+import 'dotenv/config';
+
 import { db } from "../server/db";
 import { parkingSlots } from "../shared/schema";
 import { sql } from "drizzle-orm";
