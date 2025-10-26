@@ -38,8 +38,32 @@ export default function Home() {
   
   useWebSocket();
 
+  // Fetch parking slots with location-based filtering
+  const radiusMiles = 5; // Default radius: 5 miles
+
   const { data: slots = [], isLoading } = useQuery<ParkingSlot[]>({
-    queryKey: ["/api/parking-slots"],
+    queryKey: ["/api/parking-slots", userLocation?.lat, userLocation?.lng, radiusMiles],
+    queryFn: async () => {
+      if (userLocation) {
+        // Fetch only nearby spots when user location is available
+        const params = new URLSearchParams({
+          lat: userLocation.lat.toString(),
+          lon: userLocation.lng.toString(),
+          radius: radiusMiles.toString(),
+        });
+        const response = await fetch(`/api/parking-slots?${params}`);
+        if (!response.ok) throw new Error("Failed to fetch parking slots");
+        const data = await response.json();
+        // API returns {slots: [...]} when filtering by radius
+        return data.slots || data;
+      } else {
+        // Fetch without location filter if location not available yet
+        const response = await fetch("/api/parking-slots");
+        if (!response.ok) throw new Error("Failed to fetch parking slots");
+        return response.json();
+      }
+    },
+    enabled: true, // Always enabled, but filtering logic depends on userLocation
   });
 
   const createSlotMutation = useMutation({
