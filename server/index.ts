@@ -70,8 +70,10 @@ app.use((req, res, next) => {
     // Serve the app on the port specified in the environment variable PORT
     // Default to 5000 if not specified.
     const port = parseInt(process.env.PORT || '5000', 10);
-    server.listen(port, () => {
-      log(`serving on port ${port}`);
+    const host = process.env.HOST || '127.0.0.1';
+
+    server.listen(port, host, () => {
+      log(`serving on ${host}:${port}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
