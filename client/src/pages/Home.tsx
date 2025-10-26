@@ -9,6 +9,7 @@ import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ParkingFilters, type FilterOptions } from "@/components/ParkingFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import type { ParkingSlot, InsertParkingSlot } from "@shared/schema";
@@ -34,12 +35,39 @@ export default function Home() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState({ title: "", message: "" });
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [filters, setFilters] = useState<FilterOptions>({});
+  const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
-  
+
   useWebSocket();
 
+  // Build query string with filters
+  const buildQueryString = (filterOptions: FilterOptions) => {
+    const params = new URLSearchParams();
+    if (filterOptions.minSafety) params.append("minSafety", filterOptions.minSafety.toString());
+    if (filterOptions.hasLighting) params.append("hasLighting", "true");
+    if (filterOptions.hasSecurityCamera) params.append("hasSecurityCamera", "true");
+    if (filterOptions.nearbyEvents !== undefined) params.append("nearbyEvents", filterOptions.nearbyEvents.toString());
+    if (filterOptions.highDemandArea !== undefined) params.append("highDemandArea", filterOptions.highDemandArea.toString());
+    if (filterOptions.demandLevel) params.append("demandLevel", filterOptions.demandLevel);
+    if (filterOptions.priceCategory) params.append("priceCategory", filterOptions.priceCategory);
+    if (filterOptions.maxHourlyRate) params.append("maxHourlyRate", filterOptions.maxHourlyRate.toString());
+    if (filterOptions.handicapAccessible) params.append("handicapAccessible", "true");
+    if (filterOptions.evCharging) params.append("evCharging", "true");
+    if (filterOptions.spotType) params.append("spotType", filterOptions.spotType);
+    if (filterOptions.verified !== undefined) params.append("verified", filterOptions.verified.toString());
+    return params.toString();
+  };
+
+  const queryString = buildQueryString(filters);
   const { data: slots = [], isLoading } = useQuery<ParkingSlot[]>({
-    queryKey: ["/api/parking-slots"],
+    queryKey: ["/api/parking-slots", queryString],
+    queryFn: async () => {
+      const url = queryString ? `/api/parking-slots?${queryString}` : "/api/parking-slots";
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch parking slots");
+      return response.json();
+    },
   });
 
   const createSlotMutation = useMutation({
@@ -126,41 +154,63 @@ export default function Home() {
     markTakenMutation.mutate(slot.id);
   };
 
+  const handleApplyFilters = (newFilters: FilterOptions) => {
+    setFilters(newFilters);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
-      <header className="flex items-center justify-between px-4 py-3 border-b bg-background z-10 shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-md">
-            <MapPin className="w-5 h-5 text-primary-foreground" />
+      <header className="flex flex-col border-b bg-background z-10 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-md">
+              <MapPin className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold" data-testid="text-app-title">
+                ParkShare
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                {availableSlots.length} {availableSlots.length === 1 ? "spot" : "spots"} available
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold" data-testid="text-app-title">
-              ParkShare
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              {availableSlots.length} {availableSlots.length === 1 ? "spot" : "spots"} available
-            </p>
+          <div className="flex items-center gap-2">
+            <ParkingFilters
+              open={showFilters}
+              onOpenChange={setShowFilters}
+              onApplyFilters={handleApplyFilters}
+              currentFilters={filters}
+            />
+            <Button
+              variant={view === "map" ? "default" : "ghost"}
+              size="icon"
+              onClick={() => setView("map")}
+              data-testid="button-view-map"
+            >
+              <Map className="w-5 h-5" />
+            </Button>
+            <Button
+              variant={view === "list" ? "default" : "ghost"}
+              size="icon"
+              onClick={() => setView("list")}
+              data-testid="button-view-list"
+            >
+              <List className="w-5 h-5" />
+            </Button>
+            <ThemeToggle />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={view === "map" ? "default" : "ghost"}
-            size="icon"
-            onClick={() => setView("map")}
-            data-testid="button-view-map"
-          >
-            <Map className="w-5 h-5" />
-          </Button>
-          <Button
-            variant={view === "list" ? "default" : "ghost"}
-            size="icon"
-            onClick={() => setView("list")}
-            data-testid="button-view-list"
-          >
-            <List className="w-5 h-5" />
-          </Button>
-          <ThemeToggle />
-        </div>
+        {showFilters && (
+          <div className="px-4 pb-4">
+            <ParkingFilters
+              open={showFilters}
+              onOpenChange={setShowFilters}
+              onApplyFilters={handleApplyFilters}
+              currentFilters={filters}
+            />
+          </div>
+        )}
       </header>
 
       <main className="flex-1 overflow-hidden">

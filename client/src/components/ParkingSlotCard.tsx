@@ -1,4 +1,4 @@
-import { MapPin, Clock } from "lucide-react";
+import { MapPin, Clock, Shield, Calendar, AlertTriangle, DollarSign } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +52,47 @@ export function ParkingSlotCard({ slot, distance, onNavigate, onMarkTaken }: Par
                 {slot.notes}
               </p>
             )}
+
+            {/* Safety, Event, and Price Badges */}
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              {slot.safetyScore && (
+                <Badge
+                  variant="secondary"
+                  className={`text-xs ${
+                    slot.safetyScore >= 8 ? "bg-green-100 text-green-700" :
+                    slot.safetyScore >= 6 ? "bg-yellow-100 text-yellow-700" :
+                    "bg-red-100 text-red-700"
+                  }`}
+                >
+                  <Shield className="w-3 h-3 mr-1" />
+                  {slot.safetyScore}/10
+                </Badge>
+              )}
+              {slot.nearbyEvents && (
+                <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  Event
+                </Badge>
+              )}
+              {slot.highDemandArea && (
+                <Badge variant="secondary" className="text-xs bg-red-100 text-red-700">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  High Demand
+                </Badge>
+              )}
+              {slot.priceCategory === "free" && (
+                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                  Free
+                </Badge>
+              )}
+              {slot.priceCategory && slot.priceCategory !== "free" && slot.hourlyRate && (
+                <Badge variant="secondary" className="text-xs">
+                  <DollarSign className="w-3 h-3 mr-1" />
+                  ${slot.hourlyRate.toFixed(2)}/hr
+                </Badge>
+              )}
+            </div>
+
             <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -59,7 +100,7 @@ export function ParkingSlotCard({ slot, distance, onNavigate, onMarkTaken }: Par
               </span>
               {distance !== undefined && (
                 <span data-testid={`text-distance-${slot.id}`}>
-                  {distance < 1 
+                  {distance < 1
                     ? `${Math.round(distance * 1000)}m away`
                     : `${distance.toFixed(1)}km away`
                   }

@@ -32,6 +32,28 @@ export const parkingSlots = pgTable("parking_spots", {
   currentlyAvailable: boolean("currently_available").notNull().default(true),
   lastUpdated: timestamp("last_updated").defaultNow(),
 
+  // Safety measurements
+  safetyScore: integer("safety_score").default(5), // 1-10 scale (10 = safest)
+  hasLighting: boolean("has_lighting").default(true),
+  hasSecurityCamera: boolean("has_security_camera").default(false),
+  pedestrianTraffic: varchar("pedestrian_traffic", { length: 20 }).default("medium"), // low, medium, high
+  lastSafetyCheck: timestamp("last_safety_check"),
+
+  // Event and demand data
+  nearbyEvents: boolean("nearby_events").notNull().default(false),
+  eventDistance: doublePrecision("event_distance"), // distance to nearest event in meters
+  highDemandArea: boolean("high_demand_area").notNull().default(false),
+  peakHours: jsonb("peak_hours"), // {start: "17:00", end: "20:00", days: ["Mon", "Tue"]}
+  demandLevel: varchar("demand_level", { length: 20 }).default("normal"), // low, normal, high, very_high
+
+  // Pricing and accessibility
+  priceCategory: varchar("price_category", { length: 20 }).default("free"), // free, metered, paid
+  hourlyRate: doublePrecision("hourly_rate"), // in dollars
+  maxDuration: integer("max_duration"), // in minutes
+  handicapAccessible: boolean("handicap_accessible").default(false),
+  evCharging: boolean("ev_charging").default(false),
+  surface: varchar("surface", { length: 50 }).default("paved"), // paved, gravel, dirt
+
   postedAt: timestamp("posted_at").notNull().defaultNow(),
 });
 
@@ -40,6 +62,7 @@ export const insertParkingSlotSchema = createInsertSchema(parkingSlots).omit({
   postedAt: true,
   lastUpdated: true,
   firstReportedAt: true,
+  lastSafetyCheck: true,
 }).extend({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
@@ -55,6 +78,24 @@ export const insertParkingSlotSchema = createInsertSchema(parkingSlots).omit({
   restrictions: z.record(z.any()).optional(),
   spotCount: z.number().min(1).default(1),
   currentlyAvailable: z.boolean().default(true),
+  // Safety fields
+  safetyScore: z.number().min(1).max(10).optional(),
+  hasLighting: z.boolean().optional(),
+  hasSecurityCamera: z.boolean().optional(),
+  pedestrianTraffic: z.enum(["low", "medium", "high"]).optional(),
+  // Event and demand fields
+  nearbyEvents: z.boolean().optional(),
+  eventDistance: z.number().optional(),
+  highDemandArea: z.boolean().optional(),
+  peakHours: z.record(z.any()).optional(),
+  demandLevel: z.enum(["low", "normal", "high", "very_high"]).optional(),
+  // Pricing and accessibility
+  priceCategory: z.enum(["free", "metered", "paid"]).optional(),
+  hourlyRate: z.number().optional(),
+  maxDuration: z.number().optional(),
+  handicapAccessible: z.boolean().optional(),
+  evCharging: z.boolean().optional(),
+  surface: z.enum(["paved", "gravel", "dirt"]).optional(),
 });
 
 export type InsertParkingSlot = z.infer<typeof insertParkingSlotSchema>;

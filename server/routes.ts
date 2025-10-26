@@ -49,9 +49,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lon = req.query.lon ? parseFloat(req.query.lon as string) : null;
       const radiusMiles = req.query.radius ? parseFloat(req.query.radius as string) : null;
 
+      // Get all slots first
+      let slots = await storage.getParkingSlots();
+
+      // Apply filters
+      const filters = {
+        minSafety: req.query.minSafety ? parseInt(req.query.minSafety as string) : null,
+        maxSafety: req.query.maxSafety ? parseInt(req.query.maxSafety as string) : null,
+        hasLighting: req.query.hasLighting === "true" ? true : null,
+        hasSecurityCamera: req.query.hasSecurityCamera === "true" ? true : null,
+        nearbyEvents: req.query.nearbyEvents === "true" ? true : req.query.nearbyEvents === "false" ? false : null,
+        highDemandArea: req.query.highDemandArea === "true" ? true : req.query.highDemandArea === "false" ? false : null,
+        demandLevel: req.query.demandLevel as string | null,
+        priceCategory: req.query.priceCategory as string | null,
+        maxHourlyRate: req.query.maxHourlyRate ? parseFloat(req.query.maxHourlyRate as string) : null,
+        handicapAccessible: req.query.handicapAccessible === "true" ? true : null,
+        evCharging: req.query.evCharging === "true" ? true : null,
+        spotType: req.query.spotType as string | null,
+        verified: req.query.verified === "true" ? true : req.query.verified === "false" ? false : null,
+      };
+
+      // Apply all filters
+      slots = slots.filter(slot => {
+        if (filters.minSafety && (slot.safetyScore || 0) < filters.minSafety) return false;
+        if (filters.maxSafety && (slot.safetyScore || 10) > filters.maxSafety) return false;
+        if (filters.hasLighting !== null && slot.hasLighting !== filters.hasLighting) return false;
+        if (filters.hasSecurityCamera !== null && slot.hasSecurityCamera !== filters.hasSecurityCamera) return false;
+        if (filters.nearbyEvents !== null && slot.nearbyEvents !== filters.nearbyEvents) return false;
+        if (filters.highDemandArea !== null && slot.highDemandArea !== filters.highDemandArea) return false;
+        if (filters.demandLevel && slot.demandLevel !== filters.demandLevel) return false;
+        if (filters.priceCategory && slot.priceCategory !== filters.priceCategory) return false;
+        if (filters.maxHourlyRate && slot.hourlyRate && slot.hourlyRate > filters.maxHourlyRate) return false;
+        if (filters.handicapAccessible !== null && slot.handicapAccessible !== filters.handicapAccessible) return false;
+        if (filters.evCharging !== null && slot.evCharging !== filters.evCharging) return false;
+        if (filters.spotType && slot.spotType !== filters.spotType) return false;
+        if (filters.verified !== null && slot.verified !== filters.verified) return false;
+        return true;
+      });
+
       if (lat && lon && radiusMiles && !isNaN(lat) && !isNaN(lon) && !isNaN(radiusMiles)) {
         // Use the nearby endpoint logic
-        const slots = await storage.getParkingSlots();
         const radiusMeters = radiusMiles * 1609.34;
         const nearbySlots = slots
           .map(slot => {
@@ -71,10 +108,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If no radius filter, return limited results (prevents loading 100k+ records)
       const limit = parseInt(req.query.limit as string) || 50; // Default to 50 for faster loads
-      const slots = await storage.getParkingSlots(limit);
-      
+      const limitedSlots = slots.slice(0, limit);
+
       // Return array directly for backward compatibility with frontend
-      res.json(slots);
+      res.json(limitedSlots);
     } catch (error) {
       console.error("Error fetching parking slots:", error);
       res.status(500).json({ error: "Failed to fetch parking slots" });

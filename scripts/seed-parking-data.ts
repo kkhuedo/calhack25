@@ -88,6 +88,13 @@ async function seedSFParkingMeters(limit: number = 5000): Promise<number> {
           ? `${meter.street_num} ${meter.street_name}, San Francisco, CA`
           : `${meter.street_name}, San Francisco, CA`;
 
+        // Generate realistic safety and demand data
+        const safetyScore = Math.floor(Math.random() * 4) + 6; // 6-10 for SF meters
+        const hasLighting = Math.random() > 0.2; // 80% have lighting
+        const pedestrianTraffic = Math.random() > 0.6 ? "high" : Math.random() > 0.3 ? "medium" : "low";
+        const highDemandArea = Math.random() > 0.5;
+        const demandLevel = highDemandArea ? (Math.random() > 0.5 ? "high" : "very_high") : "normal";
+
         await db.insert(parkingSlots).values({
           latitude,
           longitude,
@@ -104,6 +111,23 @@ async function seedSFParkingMeters(limit: number = 5000): Promise<number> {
             meterColor: meter.cap_color,
             smartMeter: meter.smart_mete === "Y",
           },
+          // Safety data
+          safetyScore,
+          hasLighting,
+          hasSecurityCamera: Math.random() > 0.7, // 30% have cameras
+          pedestrianTraffic,
+          // Demand and event data
+          nearbyEvents: Math.random() > 0.85, // 15% near events
+          highDemandArea,
+          demandLevel,
+          peakHours: highDemandArea ? { start: "17:00", end: "20:00", days: ["Mon", "Tue", "Wed", "Thu", "Fri"] } : null,
+          // Pricing
+          priceCategory: "metered",
+          hourlyRate: Math.random() * 3 + 1, // $1-4/hour
+          maxDuration: 120, // 2 hours
+          handicapAccessible: Math.random() > 0.8,
+          evCharging: false,
+          surface: "paved",
         }).onConflictDoNothing();
 
         inserted++;
@@ -172,6 +196,9 @@ async function seedGooglePlaces(apiKey: string | undefined): Promise<number> {
 
       for (const place of places) {
         try {
+          // Parking lots typically have better lighting and security
+          const safetyScore = Math.floor(Math.random() * 2) + 7; // 7-9 for lots
+
           await db.insert(parkingSlots).values({
             latitude: place.geometry.location.lat,
             longitude: place.geometry.location.lng,
@@ -185,6 +212,21 @@ async function seedGooglePlaces(apiKey: string | undefined): Promise<number> {
             currentlyAvailable: true,
             status: "available",
             spotCount: 50, // Estimate for parking lots
+            // Safety data (lots are generally safer)
+            safetyScore,
+            hasLighting: true,
+            hasSecurityCamera: Math.random() > 0.4, // 60% have cameras
+            pedestrianTraffic: "medium",
+            // Demand and event data
+            nearbyEvents: Math.random() > 0.8,
+            highDemandArea: Math.random() > 0.6,
+            demandLevel: Math.random() > 0.5 ? "high" : "normal",
+            // Pricing
+            priceCategory: "paid",
+            hourlyRate: Math.random() * 5 + 3, // $3-8/hour for lots
+            handicapAccessible: true,
+            evCharging: Math.random() > 0.6, // 40% have EV charging
+            surface: "paved",
           }).onConflictDoNothing();
 
           totalInserted++;
@@ -244,6 +286,8 @@ async function seedOSMParking(): Promise<number> {
         if (!lat || !lon) continue;
 
         const capacity = parseInt(element.tags?.capacity || "10");
+        const hasFee = element.tags?.fee === "yes";
+        const safetyScore = Math.floor(Math.random() * 4) + 5; // 5-9 for street parking
 
         await db.insert(parkingSlots).values({
           latitude: lat,
@@ -258,9 +302,24 @@ async function seedOSMParking(): Promise<number> {
           status: "available",
           spotCount: capacity,
           restrictions: {
-            fee: element.tags?.fee === "yes",
+            fee: hasFee,
             surface: element.tags?.surface,
           },
+          // Safety data
+          safetyScore,
+          hasLighting: Math.random() > 0.3, // 70% have lighting
+          hasSecurityCamera: false, // Street parking rarely has cameras
+          pedestrianTraffic: Math.random() > 0.5 ? "medium" : "low",
+          // Demand and event data
+          nearbyEvents: false,
+          highDemandArea: Math.random() > 0.7,
+          demandLevel: "normal",
+          // Pricing
+          priceCategory: hasFee ? "metered" : "free",
+          hourlyRate: hasFee ? Math.random() * 2 + 0.5 : null, // $0.5-2.5/hour
+          handicapAccessible: Math.random() > 0.85,
+          evCharging: false,
+          surface: element.tags?.surface || "paved",
         }).onConflictDoNothing();
 
         inserted++;
