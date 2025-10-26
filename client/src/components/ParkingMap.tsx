@@ -83,18 +83,30 @@ export function ParkingMap({ slots, userLocation, onMapClick, onSlotClick, cente
         const marker = markersRef.current.get(slot.id)!;
         marker.setLatLng([slot.latitude, slot.longitude]);
       } else {
-        const isAvailable = slot.status === "available";
-        const markerIcon = L.divIcon({
+        const isAvailable = slot.status === "available" || slot.currentlyAvailable;
+        const isVerified = slot.verified;
+
+        // Color scheme based on verification and availability
+        let markerColor = "bg-red-500"; // Occupied (default)
+        let markerIcon = ""; // Default parking icon
+
+        if (isAvailable) {
+          if (isVerified) {
+            markerColor = "bg-green-500"; // Verified & Available
+            markerIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          } else {
+            markerColor = "bg-orange-500"; // Unverified & Available
+            markerIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+          }
+        }
+
+        const markerIconDiv = L.divIcon({
           className: "custom-parking-marker",
           html: `
-            <div class="flex items-center justify-center w-10 h-10 ${
-              isAvailable ? "bg-primary" : "bg-muted"
-            } rounded-full border-2 border-white shadow-lg ${
-              isAvailable ? "animate-pulse" : "opacity-50"
+            <div class="flex items-center justify-center w-10 h-10 ${markerColor} rounded-full border-2 border-white shadow-lg ${
+              isAvailable ? "animate-pulse" : "opacity-75"
             }">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
+              ${markerIcon}
             </div>
           `,
           iconSize: [40, 40],
@@ -102,7 +114,7 @@ export function ParkingMap({ slots, userLocation, onMapClick, onSlotClick, cente
         });
 
         const marker = L.marker([slot.latitude, slot.longitude], {
-          icon: markerIcon,
+          icon: markerIconDiv,
         });
         
         if (mapRef.current) {
@@ -184,21 +196,50 @@ export function ParkingMap({ slots, userLocation, onMapClick, onSlotClick, cente
               </svg>
             </Button>
           </div>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
             <span data-testid="text-slot-time">
-              {new Date(selectedSlot.postedAt).toLocaleTimeString([], { 
-                hour: "2-digit", 
-                minute: "2-digit" 
+              {new Date(selectedSlot.postedAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
               })}
             </span>
-            <span className={selectedSlot.status === "available" ? "text-primary font-medium" : ""}>
-              {selectedSlot.status === "available" ? "Available" : "Taken"}
+            <span className={selectedSlot.status === "available" || selectedSlot.currentlyAvailable ? "text-primary font-medium" : ""}>
+              {selectedSlot.status === "available" || selectedSlot.currentlyAvailable ? "Available" : "Taken"}
             </span>
           </div>
-          {selectedSlot.status === "available" && (
-            <Button className="w-full" size="sm" data-testid="button-navigate">
-              Navigate Here
-            </Button>
+          <div className="flex items-center gap-2 mb-3">
+            {selectedSlot.verified ? (
+              <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Verified
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                Unverified ({selectedSlot.userConfirmations || 0}/3 confirmations)
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              Confidence: {selectedSlot.confidenceScore || 70}%
+            </span>
+          </div>
+          {(selectedSlot.status === "available" || selectedSlot.currentlyAvailable) && (
+            <div className="flex gap-2">
+              <Button className="flex-1" size="sm" data-testid="button-navigate">
+                Navigate Here
+              </Button>
+              {!selectedSlot.verified && (
+                <Button variant="outline" size="sm" className="flex-1" data-testid="button-confirm">
+                  Confirm Spot
+                </Button>
+              )}
+            </div>
           )}
         </Card>
       )}
