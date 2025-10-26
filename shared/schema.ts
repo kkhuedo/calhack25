@@ -47,7 +47,7 @@ export const insertParkingSlotSchema = createInsertSchema(parkingSlots).omit({
   notes: z.string().optional(),
   status: z.enum(["available", "taken"]).default("available"),
   spotType: z.enum(["metered", "public_lot", "garage", "street", "user_discovered"]).default("user_discovered"),
-  dataSource: z.enum(["sf_open_data", "google_places", "openstreetmap", "user_report"]).default("user_report"),
+  dataSource: z.enum(["sf_open_data", "sf_parking_regulations", "google_places", "openstreetmap", "user_report"]).default("user_report"),
   verified: z.boolean().default(false),
   confidenceScore: z.number().min(0).max(100).default(70),
   userConfirmations: z.number().min(0).default(0),
