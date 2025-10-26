@@ -39,43 +39,74 @@ export interface ParsedGooglePlace {
 }
 
 /**
- * Comprehensive search grid covering SF Bay Area
+ * Comprehensive search grid covering SF Bay Area with HIGH DENSITY
+ * Grid points are ~800-1000m apart for maximum coverage
  */
 export const SF_BAY_AREA_GRID = [
-  // San Francisco - Downtown/Financial District
+  // San Francisco - Downtown/Financial District (Dense coverage)
   { lat: 37.7937, lon: -122.3965, name: 'SF Financial District' },
+  { lat: 37.7912, lon: -122.3990, name: 'SF Embarcadero' },
   { lat: 37.7879, lon: -122.4075, name: 'SF Union Square' },
+  { lat: 37.7854, lon: -122.4044, name: 'SF Chinatown' },
   { lat: 37.7749, lon: -122.4194, name: 'SF Downtown' },
+  { lat: 37.7833, lon: -122.4167, name: 'SF Civic Center' },
 
   // San Francisco - North
   { lat: 37.8024, lon: -122.4058, name: 'SF North Beach' },
   { lat: 37.8080, lon: -122.4177, name: 'SF Fisherman\'s Wharf' },
+  { lat: 37.8048, lon: -122.4194, name: 'SF Pier 39 Area' },
   { lat: 37.7989, lon: -122.4662, name: 'SF Presidio' },
+  { lat: 37.8066, lon: -122.4324, name: 'SF Marina District' },
 
   // San Francisco - West
-  { lat: 37.7833, lon: -122.4167, name: 'SF Civic Center' },
-  { lat: 37.7694, lon: -122.4862, name: 'SF Golden Gate Park' },
-  { lat: 37.7577, lon: -122.4376, name: 'SF Sunset' },
+  { lat: 37.7694, lon: -122.4862, name: 'SF Golden Gate Park East' },
+  { lat: 37.7694, lon: -122.5062, name: 'SF Golden Gate Park West' },
+  { lat: 37.7577, lon: -122.4376, name: 'SF Inner Sunset' },
+  { lat: 37.7577, lon: -122.4576, name: 'SF Outer Sunset' },
+  { lat: 37.7438, lon: -122.4627, name: 'SF West Portal' },
 
   // San Francisco - East/South
-  { lat: 37.7897, lon: -122.3972, name: 'SF Mission' },
+  { lat: 37.7897, lon: -122.3972, name: 'SF Mission District' },
+  { lat: 37.7697, lon: -122.4047, name: 'SF Castro' },
   { lat: 37.7599, lon: -122.4148, name: 'SF Mission Bay' },
+  { lat: 37.7506, lon: -122.4121, name: 'SF Potrero Hill' },
   { lat: 37.7272, lon: -122.4657, name: 'SF Daly City' },
+  { lat: 37.7118, lon: -122.4426, name: 'SF South SF' },
 
-  // Berkeley
+  // San Francisco - Richmond/Sunset
+  { lat: 37.7806, lon: -122.4644, name: 'SF Richmond District' },
+  { lat: 37.7644, lon: -122.4844, name: 'SF Outer Richmond' },
+
+  // Berkeley (Dense coverage)
   { lat: 37.8716, lon: -122.2727, name: 'Berkeley Downtown' },
-  { lat: 37.8825, lon: -122.2589, name: 'Berkeley North' },
+  { lat: 37.8825, lon: -122.2589, name: 'Berkeley North/Hills' },
   { lat: 37.8600, lon: -122.2800, name: 'Berkeley South' },
+  { lat: 37.8697, lon: -122.2584, name: 'UC Berkeley Campus' },
+  { lat: 37.8764, lon: -122.2672, name: 'Berkeley Telegraph Ave' },
 
-  // Oakland
+  // Oakland (Dense coverage)
   { lat: 37.8044, lon: -122.2712, name: 'Oakland Downtown' },
   { lat: 37.8152, lon: -122.2364, name: 'Oakland Lake Merritt' },
-  { lat: 37.7688, lon: -122.2363, name: 'Oakland Airport' },
+  { lat: 37.8088, lon: -122.2697, name: 'Oakland Uptown' },
+  { lat: 37.7955, lon: -122.2655, name: 'Oakland Jack London' },
+  { lat: 37.7847, lon: -122.2647, name: 'Oakland Fruitvale' },
+  { lat: 37.7688, lon: -122.2363, name: 'Oakland Airport Area' },
+  { lat: 37.8270, lon: -122.2737, name: 'Oakland Rockridge' },
 
-  // Peninsula
+  // Emeryville/Berkeley Border
+  { lat: 37.8404, lon: -122.2889, name: 'Emeryville' },
+
+  // Peninsula Cities (Key areas)
   { lat: 37.5483, lon: -122.3050, name: 'Redwood City' },
-  { lat: 37.4443, lon: -122.1598, name: 'Palo Alto' },
+  { lat: 37.5630, lon: -122.3255, name: 'San Carlos' },
+  { lat: 37.4443, lon: -122.1598, name: 'Palo Alto Downtown' },
+  { lat: 37.4419, lon: -122.1430, name: 'Palo Alto Stanford' },
   { lat: 37.3861, lon: -122.0839, name: 'Mountain View' },
+  { lat: 37.3688, lon: -122.0363, name: 'Sunnyvale' },
+
+  // San Jose (Major areas)
+  { lat: 37.3382, lon: -121.8863, name: 'San Jose Downtown' },
+  { lat: 37.3229, lon: -121.9575, name: 'San Jose West' },
 ];
 
 /**
@@ -84,7 +115,7 @@ export const SF_BAY_AREA_GRID = [
 export async function fetchParkingForLocation(
   apiKey: string,
   location: { lat: number; lon: number; name: string },
-  radiusMeters: number = 2000
+  radiusMeters: number = 1000 // Reduced to 1km for more granular coverage
 ): Promise<GooglePlaceResult[]> {
   console.log(`  🔍 Searching ${location.name}...`);
 
@@ -157,10 +188,10 @@ export async function fetchParkingForLocation(
 export async function fetchAllGooglePlaces(
   apiKey: string,
   searchGrid: typeof SF_BAY_AREA_GRID = SF_BAY_AREA_GRID,
-  radiusMeters: number = 2000,
+  radiusMeters: number = 1000, // 1km = ~0.6 miles, good for granular coverage
   delayMs: number = 1000
 ): Promise<ParsedGooglePlace[]> {
-  console.log(`🅿️  Fetching parking from Google Places API...`);
+  console.log(`🅿️  Fetching parking from Google Places API (ENHANCED GRANULARITY)...`);
   console.log(`📍 Searching ${searchGrid.length} locations with ${radiusMeters}m radius\n`);
 
   const allPlaces: ParsedGooglePlace[] = [];

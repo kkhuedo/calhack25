@@ -50,20 +50,108 @@ export interface ParsedOSMSpot {
 }
 
 /**
- * Query regions for comprehensive Bay Area coverage
+ * Query regions for comprehensive Bay Area coverage with HIGH GRANULARITY
+ * Smaller regions = more precise, less data per query = faster
  */
 export const BAY_AREA_REGIONS = [
+  // San Francisco - Split into smaller regions for better granularity
   {
-    name: 'San Francisco',
-    bounds: { south: 37.7, north: 37.82, west: -122.52, east: -122.35 },
+    name: 'SF Downtown/Financial District',
+    bounds: { south: 37.77, north: 37.80, west: -122.42, east: -122.38 },
   },
   {
-    name: 'Berkeley/Oakland',
-    bounds: { south: 37.77, north: 37.92, west: -122.35, east: -122.15 },
+    name: 'SF North Beach/Fisherman\'s Wharf',
+    bounds: { south: 37.80, north: 37.82, west: -122.43, east: -122.39 },
   },
   {
-    name: 'Peninsula South',
-    bounds: { south: 37.35, north: 37.55, west: -122.35, east: -122.05 },
+    name: 'SF Mission/Castro',
+    bounds: { south: 37.74, north: 37.77, west: -122.44, east: -122.40 },
+  },
+  {
+    name: 'SF Sunset/Richmond',
+    bounds: { south: 37.75, north: 37.78, west: -122.52, east: -122.46 },
+  },
+  {
+    name: 'SF South/Mission Bay',
+    bounds: { south: 37.70, north: 37.77, west: -122.42, east: -122.38 },
+  },
+  {
+    name: 'SF West/Golden Gate Park',
+    bounds: { south: 37.76, north: 37.80, west: -122.52, east: -122.44 },
+  },
+
+  // Berkeley - Detailed coverage
+  {
+    name: 'Berkeley Downtown',
+    bounds: { south: 37.86, north: 37.88, west: -122.28, east: -122.26 },
+  },
+  {
+    name: 'Berkeley Campus/Telegraph',
+    bounds: { south: 37.86, north: 37.88, west: -122.27, east: -122.25 },
+  },
+  {
+    name: 'Berkeley North/Hills',
+    bounds: { south: 37.88, north: 37.90, west: -122.28, east: -122.24 },
+  },
+  {
+    name: 'Berkeley South',
+    bounds: { south: 37.84, north: 37.86, west: -122.29, east: -122.26 },
+  },
+
+  // Oakland - Detailed coverage
+  {
+    name: 'Oakland Downtown',
+    bounds: { south: 37.79, north: 37.82, west: -122.28, east: -122.26 },
+  },
+  {
+    name: 'Oakland Uptown/Lake Merritt',
+    bounds: { south: 37.80, north: 37.83, west: -122.27, east: -122.23 },
+  },
+  {
+    name: 'Oakland Jack London/Waterfront',
+    bounds: { south: 37.78, north: 37.81, west: -122.28, east: -122.25 },
+  },
+  {
+    name: 'Oakland East/Fruitvale',
+    bounds: { south: 37.77, north: 37.80, west: -122.26, east: -122.21 },
+  },
+  {
+    name: 'Oakland Rockridge/Temescal',
+    bounds: { south: 37.82, north: 37.85, west: -122.28, east: -122.24 },
+  },
+
+  // Emeryville
+  {
+    name: 'Emeryville',
+    bounds: { south: 37.83, north: 37.85, west: -122.30, east: -122.28 },
+  },
+
+  // Peninsula - Key cities
+  {
+    name: 'Palo Alto',
+    bounds: { south: 37.42, north: 37.46, west: -122.17, east: -122.13 },
+  },
+  {
+    name: 'Mountain View',
+    bounds: { south: 37.37, north: 37.41, west: -122.10, east: -122.06 },
+  },
+  {
+    name: 'Redwood City',
+    bounds: { south: 37.47, north: 37.50, west: -122.24, east: -122.20 },
+  },
+  {
+    name: 'San Mateo',
+    bounds: { south: 37.54, north: 37.58, west: -122.33, east: -122.29 },
+  },
+
+  // San Jose
+  {
+    name: 'San Jose Downtown',
+    bounds: { south: 37.32, north: 37.35, west: -121.90, east: -121.87 },
+  },
+  {
+    name: 'San Jose West',
+    bounds: { south: 37.30, north: 37.34, west: -121.98, east: -121.93 },
   },
 ];
 

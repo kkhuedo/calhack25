@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Map, List, Plus, MapPin } from "lucide-react";
+import { Map, List, Plus, MapPin, MapPinned } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ParkingMap } from "@/components/ParkingMap";
 import { ParkingSlotCard } from "@/components/ParkingSlotCard";
 import { AddParkingSpotDialog } from "@/components/AddParkingSpotDialog";
@@ -34,12 +41,10 @@ export default function Home() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState({ title: "", message: "" });
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [radiusMiles, setRadiusMiles] = useState(0.5); // Default: 0.5 miles (walkable distance ~10 min walk)
   const { toast } = useToast();
-  
-  useWebSocket();
 
-  // Fetch parking slots with location-based filtering
-  const radiusMiles = 5; // Default radius: 5 miles
+  useWebSocket();
 
   const { data: slots = [], isLoading } = useQuery<ParkingSlot[]>({
     queryKey: ["/api/parking-slots", userLocation?.lat, userLocation?.lng, radiusMiles],
@@ -167,6 +172,22 @@ export default function Home() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Select
+            value={radiusMiles.toString()}
+            onValueChange={(value) => setRadiusMiles(parseFloat(value))}
+          >
+            <SelectTrigger className="w-[140px] h-9">
+              <MapPinned className="w-4 h-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0.25">¼ mile (5 min)</SelectItem>
+              <SelectItem value="0.5">½ mile (10 min)</SelectItem>
+              <SelectItem value="1">1 mile (20 min)</SelectItem>
+              <SelectItem value="2">2 miles</SelectItem>
+              <SelectItem value="5">5 miles</SelectItem>
+            </SelectContent>
+          </Select>
           <Button
             variant={view === "map" ? "default" : "ghost"}
             size="icon"
