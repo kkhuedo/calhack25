@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertParkingSlotSchema } from "@shared/schema";
 import { z } from "zod";
+import { calculateDistance } from "./geo-utils";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -43,11 +44,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/parking-slots", async (req, res) => {
     try {
-      const slots = await storage.getParkingSlots();
+      // Support optional radius filtering for performance
+      const lat = req.query.lat ? parseFloat(req.query.lat as string) : null;
+      const lon = req.query.lon ? parseFloat(req.query.lon as string) : null;
+      const radiusMiles = req.query.radius ? parseFloat(req.query.radius as string) : null;
+
+      if (lat && lon && radiusMiles && !isNaN(lat) && !isNaN(lon) && !isNaN(radiusMiles)) {
+        // Use the nearby endpoint logic
+        const slots = await storage.getParkingSlots();
+        const radiusMeters = radiusMiles * 1609.34;
+        const nearbySlots = slots
+          .map(slot => {
+            const distance = calculateDistance(lat, lon, slot.latitude, slot.longitude);
+            return { ...slot, distance };
+          })
+          .filter(slot => slot.distance <= radiusMeters)
+          .sort((a, b) => a.distance - b.distance);
+
+        return res.json({
+          center: { latitude: lat, longitude: lon },
+          radius: radiusMiles,
+          count: nearbySlots.length,
+          slots: nearbySlots
+        });
+      }
+
+      // If no radius filter, return limited results (prevents loading 100k+ records)
+      const limit = parseInt(req.query.limit as string) || 50; // Default to 50 for faster loads
+      const slots = await storage.getParkingSlots(limit);
+      
+      // Return array directly for backward compatibility with frontend
       res.json(slots);
     } catch (error) {
       console.error("Error fetching parking slots:", error);
       res.status(500).json({ error: "Failed to fetch parking slots" });
+    }
+  });
+
+  // Get parking spots within a radius (in miles) - optimized for radius-based queries
+  app.get("/api/parking-slots/nearby", async (req, res) => {
+    try {
+      const lat = parseFloat(req.query.lat as string);
+      const lon = parseFloat(req.query.lon as string);
+      const radiusMiles = parseFloat(req.query.radius as string) || 1.0; // default 1 mile
+      const limit = parseInt(req.query.limit as string) || 100;
+
+      if (isNaN(lat) || isNaN(lon)) {
+        return res.status(400).json({ error: "Invalid latitude or longitude" });
+      }
+
+      // Use nearby storage method if available for better performance
+      const slots = await storage.getParkingSlots();
+      
+      // Filter slots within radius (1 mile ≈ 1609.34 meters)
+      const radiusMeters = radiusMiles * 1609.34;
+      const nearbySlots = slots
+        .map(slot => {
+          const distance = calculateDistance(lat, lon, slot.latitude, slot.longitude);
+          return { ...slot, distance };
+        })
+        .filter(slot => slot.distance <= radiusMeters)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, limit); // Limit results
+
+      res.json({
+        center: { latitude: lat, longitude: lon },
+        radius: radiusMiles,
+        count: nearbySlots.length,
+        limit,
+        slots: nearbySlots
+      });
+    } catch (error) {
+      console.error("Error fetching nearby parking slots:", error);
+      res.status(500).json({ error: "Failed to fetch nearby parking slots" });
     }
   });
 

@@ -13,7 +13,7 @@ export interface SpotReportResult {
 }
 
 export interface IStorage {
-  getParkingSlots(): Promise<ParkingSlot[]>;
+  getParkingSlots(limit?: number): Promise<ParkingSlot[]>;
   getParkingSlot(id: string): Promise<ParkingSlot | undefined>;
   createParkingSlot(slot: InsertParkingSlot): Promise<ParkingSlot>;
   updateParkingSlot(id: string, updates: Partial<InsertParkingSlot>): Promise<ParkingSlot | undefined>;
@@ -26,8 +26,9 @@ export interface IStorage {
 export class MemoryStorage implements IStorage {
   private slots: Map<string, ParkingSlot> = new Map();
 
-  async getParkingSlots(): Promise<ParkingSlot[]> {
-    return Array.from(this.slots.values());
+  async getParkingSlots(limit?: number): Promise<ParkingSlot[]> {
+    const allSlots = Array.from(this.slots.values());
+    return limit ? allSlots.slice(0, limit) : allSlots;
   }
 
   async getParkingSlot(id: string): Promise<ParkingSlot | undefined> {
@@ -35,6 +36,7 @@ export class MemoryStorage implements IStorage {
   }
 
   async createParkingSlot(insertSlot: InsertParkingSlot): Promise<ParkingSlot> {
+    const now = new Date();
     const slot: ParkingSlot = {
       id: randomUUID(),
       latitude: insertSlot.latitude,
@@ -42,7 +44,18 @@ export class MemoryStorage implements IStorage {
       address: insertSlot.address,
       notes: insertSlot.notes || null,
       status: insertSlot.status || "available",
-      postedAt: new Date(),
+      spotType: insertSlot.spotType || "user_discovered",
+      dataSource: insertSlot.dataSource || "user_report",
+      verified: insertSlot.verified || false,
+      confidenceScore: insertSlot.confidenceScore || 70,
+      userConfirmations: insertSlot.userConfirmations || 0,
+      firstReportedBy: insertSlot.firstReportedBy || null,
+      firstReportedAt: now,
+      restrictions: insertSlot.restrictions || null,
+      spotCount: insertSlot.spotCount || 1,
+      currentlyAvailable: insertSlot.currentlyAvailable !== undefined ? insertSlot.currentlyAvailable : true,
+      lastUpdated: now,
+      postedAt: now,
     };
     this.slots.set(slot.id, slot);
     return slot;
@@ -103,6 +116,7 @@ export class MemoryStorage implements IStorage {
         userConfirmations: 1,
         firstReportedBy: userId,
         currentlyAvailable: status === 'available',
+        spotCount: 1,
       });
 
       return {
@@ -130,18 +144,22 @@ export class MemoryStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  async getParkingSlots(): Promise<ParkingSlot[]> {
+  async getParkingSlots(limit?: number): Promise<ParkingSlot[]> {
     if (!db) throw new Error("Database not configured. Set DATABASE_URL or use MemoryStorage.");
-    return await db.select().from(parkingSlots);
+    // Use SQL limit to avoid loading all 100k+ records at once
+    const query = db!.select().from(parkingSlots);
+    return limit ? await query.limit(limit) : await query.limit(1000); // Default 1000 max
   }
 
   async getParkingSlot(id: string): Promise<ParkingSlot | undefined> {
-    const [slot] = await db.select().from(parkingSlots).where(eq(parkingSlots.id, id));
+    if (!db) throw new Error("Database not configured. Set DATABASE_URL or use MemoryStorage.");
+    const [slot] = await db!.select().from(parkingSlots).where(eq(parkingSlots.id, id));
     return slot || undefined;
   }
 
   async createParkingSlot(insertSlot: InsertParkingSlot): Promise<ParkingSlot> {
-    const [slot] = await db
+    if (!db) throw new Error("Database not configured. Set DATABASE_URL or use MemoryStorage.");
+    const [slot] = await db!
       .insert(parkingSlots)
       .values(insertSlot)
       .returning();
@@ -149,7 +167,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateParkingSlot(id: string, updates: Partial<InsertParkingSlot>): Promise<ParkingSlot | undefined> {
-    const [updatedSlot] = await db
+    if (!db) throw new Error("Database not configured. Set DATABASE_URL or use MemoryStorage.");
+    const [updatedSlot] = await db!
       .update(parkingSlots)
       .set(updates)
       .where(eq(parkingSlots.id, id))
@@ -158,7 +177,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteParkingSlot(id: string): Promise<boolean> {
-    const result = await db
+    if (!db) throw new Error("Database not configured. Set DATABASE_URL or use MemoryStorage.");
+    const result = await db!
       .delete(parkingSlots)
       .where(eq(parkingSlots.id, id))
       .returning();
@@ -203,6 +223,7 @@ export class DatabaseStorage implements IStorage {
         userConfirmations: 1,
         firstReportedBy: userId,
         currentlyAvailable: status === 'available',
+        spotCount: 1,
       });
 
       return {
@@ -229,7 +250,5 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Use MemoryStorage for development without database
-// Switch to DatabaseStorage when you're ready to use PostgreSQL
-export const storage = new MemoryStorage();
-// export const storage = new DatabaseStorage();
+// Use DatabaseStorage when DATABASE_URL is available, otherwise fall back to MemoryStorage
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemoryStorage();

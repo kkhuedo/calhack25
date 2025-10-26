@@ -3,7 +3,7 @@ import { pgTable, text, varchar, doublePrecision, timestamp, boolean, integer, j
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const parkingSlots = pgTable("parking_slots", {
+export const parkingSlots = pgTable("parking_spots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   latitude: doublePrecision("latitude").notNull(),
   longitude: doublePrecision("longitude").notNull(),
