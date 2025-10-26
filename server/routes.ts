@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertParkingSlotSchema } from "@shared/schema";
 import { z } from "zod";
+import { parkingAggregator } from "./services/parking-data/aggregator.service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -38,6 +39,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Health check failed:", error);
       res.status(503).json({ status: "error", database: "disconnected" });
+    }
+  });
+
+  // NEW: Get aggregated parking availability from multiple sources
+  app.get("/api/parking-availability", async (req, res) => {
+    try {
+      // Validate query parameters
+      const schema = z.object({
+        latitude: z.string().transform(Number).pipe(z.number().min(-90).max(90)),
+        longitude: z.string().transform(Number).pipe(z.number().min(-180).max(180)),
+        radius: z.string().transform(Number).pipe(z.number().min(100).max(5000)).optional(),
+      });
+
+      const validated = schema.safeParse(req.query);
+
+      if (!validated.success) {
+        return res.status(400).json({
+          error: "Invalid parameters",
+          details: validated.error.errors,
+        });
+      }
+
+      const { latitude, longitude, radius = 500 } = validated.data;
+
+      // Get aggregated data
+      const availability = await parkingAggregator.getParkingAvailability(
+        { latitude, longitude },
+        radius
+      );
+
+      res.json(availability);
+    } catch (error) {
+      console.error("Error fetching parking availability:", error);
+      res.status(500).json({ error: "Failed to fetch parking availability" });
     }
   });
 
