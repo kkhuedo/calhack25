@@ -142,7 +142,7 @@ async function testAllLocations() {
 
   console.log(`\n${'='.repeat(60)}`);
   console.log('✅ All tests completed!');
-  console.log('='.repeat(60)}\n`);
+  console.log(`${'='.repeat(60)}\n`);
 }
 
 // Run tests
