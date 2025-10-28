@@ -94,7 +94,16 @@ export default function Home() {
     mutationFn: async (data: InsertParkingSlot) => {
       return await apiRequest("POST", "/api/parking-slots", data);
     },
-    onSuccess: () => {
+    onSuccess: (newSlot: any) => {
+      // Ensure nearby results include the newly created spot by setting userLocation
+      try {
+        if (newSlot && typeof newSlot.latitude === 'number' && typeof newSlot.longitude === 'number') {
+          setUserLocation({ lat: newSlot.latitude, lng: newSlot.longitude });
+        }
+      } catch (e) {
+        // ignore
+      }
+
       queryClient.invalidateQueries({ queryKey: ["/api/parking-slots"] });
       setIsAddDialogOpen(false);
       setConfirmationMessage({
@@ -160,8 +169,8 @@ export default function Home() {
       if (slot.spotType === "metered" && !filters.showMetered) return false;
 
       // Filter by cost (free vs paid)
-      const isFree = !slot.restrictions?.fee && slot.spotType !== "metered";
-      const isPaid = slot.restrictions?.fee || slot.spotType === "metered";
+      const isFree = !(slot.restrictions as any)?.fee && slot.spotType !== "metered";
+      const isPaid = (slot.restrictions as any)?.fee || slot.spotType === "metered";
 
       if (isFree && !filters.showFree) return false;
       if (isPaid && !filters.showPaid) return false;

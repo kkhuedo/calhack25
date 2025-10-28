@@ -10,6 +10,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "seed": "tsx scripts/seed-parking-data.ts",
+    "seed:berkeley": "tsx scripts/seed-berkeley-spots.ts",
     "import:csv": "tsx scripts/import-csv-data.ts",
     "import:all": "tsx scripts/import-all-free-sources.ts"
   },
